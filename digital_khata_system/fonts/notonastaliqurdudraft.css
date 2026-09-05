@@ -1,0 +1,13 @@
+/*
+ * Noto Nastaliq Urdu Draft (Arabic) http://www.google.com/fonts/earlyaccess
+ */
+@font-face {
+  font-family: 'Noto Nastaliq Urdu Draft';
+  font-style: normal;
+  font-weight: 400;
+  src: url(font/NotoNastaliqUrduDraft.eot);
+  src: url(font/NotoNastaliqUrduDraft.eot?#iefix) format('embedded-opentype'),
+       url(font/NotoNastaliqUrduDraft.woff2) format('woff2'),
+       url(font/NotoNastaliqUrduDraft.woff) format('woff'),
+       url(font/NotoNastaliqUrduDraft.ttf) format('truetype');
+}

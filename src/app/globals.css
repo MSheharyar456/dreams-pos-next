@@ -24,3 +24,25 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+.supplier-history-button:hover,
+.supplier-history-button:focus {
+  background-color: #ff9f43 !important;
+  border-color: #ff9f43 !important;
+  color: #ffffff !important;
+}
+
+/* Custom Scrollbar for Sidebar */
+.sidebar-inner::-webkit-scrollbar {
+  width: 5px;
+}
+.sidebar-inner::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-inner::-webkit-scrollbar-thumb {
+  background-color: #d1d5db;
+  border-radius: 10px;
+}
+.sidebar-inner:hover::-webkit-scrollbar-thumb {
+  background-color: #9ca3af;
+}

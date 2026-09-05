@@ -1,0 +1,100 @@
+[26-Mar-2025 18:27:53 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php on line 171
+[26-Mar-2025 18:27:58 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php on line 171
+[26-Mar-2025 18:28:02 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php on line 171
+[26-Mar-2025 18:29:28 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php on line 171
+[26-Mar-2025 18:29:42 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php on line 171
+[26-Mar-2025 18:30:00 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php on line 171
+[26-Mar-2025 18:30:07 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales.php on line 171
+[26-Mar-2025 18:30:24 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php on line 171
+[26-Mar-2025 18:30:44 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/customer.php:140
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/customer.php on line 140
+[26-Mar-2025 18:30:47 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/customer.php:140
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/customer.php on line 140
+[26-Mar-2025 18:30:49 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/supplier.php:139
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/supplier.php on line 139
+[26-Mar-2025 18:30:50 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/salesreport.php:172
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/salesreport.php on line 172
+[26-Mar-2025 18:30:56 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales_inventory.php:200
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/sales_inventory.php on line 200
+[26-Mar-2025 18:30:58 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php:176
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php on line 176
+[26-Mar-2025 18:31:07 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php on line 171
+[26-Mar-2025 18:31:08 UTC] PHP Fatal error:  Uncaught Error: Call to a member function prepare() on null in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php:171
+Stack trace:
+#0 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php on line 171
+[26-Mar-2025 18:33:35 UTC] PHP Fatal error:  Uncaught TypeError: array_sum(): Argument #1 ($array) must be of type array, null given in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php:354
+Stack trace:
+#0 /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php(354): array_sum()
+#1 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php on line 354
+[26-Mar-2025 18:33:39 UTC] PHP Warning:  Undefined variable $host in /home/ktl2442yr8r2/adoaero.com/public/ps/connect.php on line 20
+[26-Mar-2025 18:33:51 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'pos_sales.purchase_record' doesn't exist in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php:204
+Stack trace:
+#0 /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php(204): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php on line 204
+[26-Mar-2025 18:39:04 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'pos_sales.purchase_record' doesn't exist in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php:204
+Stack trace:
+#0 /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php(204): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php on line 204
+[26-Mar-2025 18:41:51 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'pos_sales.purchase_record' doesn't exist in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php:204
+Stack trace:
+#0 /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php(204): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php on line 204
+[26-Mar-2025 18:41:52 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'pos_sales.purchase_record' doesn't exist in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php:204
+Stack trace:
+#0 /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php(204): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php on line 204
+[26-Mar-2025 18:41:58 UTC] PHP Fatal error:  Uncaught TypeError: array_sum(): Argument #1 ($array) must be of type array, null given in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php:354
+Stack trace:
+#0 /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php(354): array_sum()
+#1 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/products.php on line 354
+[26-Mar-2025 18:42:05 UTC] PHP Fatal error:  Uncaught PDOException: SQLSTATE[42S02]: Base table or view not found: 1146 Table 'pos_sales.purchase_record' doesn't exist in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php:204
+Stack trace:
+#0 /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php(204): PDOStatement->execute()
+#1 {main}
+  thrown in /home/ktl2442yr8r2/adoaero.com/public/ps/main/purchase_invoice.php on line 204

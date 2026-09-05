@@ -1,0 +1,147 @@
+/* custom-auth.css - Custom layout for Authentication matching Digiskills pattern */
+
+.custom-auth-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #eaeaea;
+  padding: 20px;
+}
+
+.custom-auth-card {
+  background: #ffffff;
+  width: 100%;
+  max-width: 450px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Header Section */
+.custom-auth-header {
+  background-color: #414141;
+  padding: 0px 20px;
+  text-align: center;
+  /* border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px; */
+  margin-bottom: 25px;
+}
+
+.custom-auth-header img {
+  max-width: 350px;
+  margin-bottom: 15px;
+  background-color: transparent;
+  padding: 10px;
+  border-left: 6px solid #ffffff;
+  border-right: 6px solid #ffffff;
+  border-bottom: 6px solid #ffffff;
+  border-radius: 0 0 16px 16px;
+}
+
+.custom-auth-header h2 {
+  color: #ffffff;
+  font-size: 22px;
+  font-weight: 500;
+  margin: 0;
+}
+
+/* Body Section */
+.custom-auth-body {
+  padding: 0 30px 30px 30px;
+}
+
+.custom-auth-title {
+  text-align: center;
+  font-weight: 700;
+  color: #333333;
+  font-size: 16px;
+  margin-bottom: 25px;
+}
+
+/* Form Inputs */
+.custom-auth-form-group {
+  margin-bottom: 20px;
+  position: relative;
+}
+
+.custom-auth-input {
+  width: 100%;
+  padding: 12px 15px;
+  background-color: #e6f0fa;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  color: #333333;
+  outline: none;
+}
+
+.custom-auth-input:focus {
+  border-color: #86b7fe;
+  background-color: #e6f0fa;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+.custom-auth-password-toggle {
+  position: absolute;
+  right: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #999;
+  border-left: 1px solid #ced4da;
+  padding-left: 10px;
+}
+
+/* Checkbox */
+.custom-auth-checkbox {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+  font-size: 14px;
+  color: #555;
+}
+
+.custom-auth-checkbox input {
+  margin-right: 8px;
+}
+
+/* Button */
+.custom-auth-btn {
+  width: 100%;
+  background-color: #ff9f43;
+  color: #ffffff;
+  border: none;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.custom-auth-btn:hover {
+  background-color: #e68f3c;
+}
+
+/* Footer Links */
+.custom-auth-footer {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 25px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.custom-auth-footer .link-danger {
+  color: #d32f2f;
+  text-decoration: underline;
+}
+
+.custom-auth-footer .link-primary {
+  color: #1976d2;
+  text-decoration: underline;
+}
+
+.custom-auth-footer a:hover {
+  opacity: 0.8;
+}
