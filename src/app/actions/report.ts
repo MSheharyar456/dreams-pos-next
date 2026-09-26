@@ -126,9 +126,10 @@ export async function getSalesInventory(startDate?: string, endDate?: string) {
     total,
     sale_id,
     product_variant_id,
-    sales (
+    sales!inner (
       invoice_number,
-      created_at
+      created_at,
+      order_status
     ),
     product_variants (
       variant_name,
@@ -144,7 +145,7 @@ export async function getSalesInventory(startDate?: string, endDate?: string) {
   // without inner joins that are complex. We will fetch and filter in JS, or use a view.
   // Since we don't have a view, we'll fetch all and filter in JS (assuming reasonable data size for now).
 
-  const { data: items, error } = await query;
+  const { data: items, error } = await query.eq('sales.order_status', 'completed');
 
   if (error) {
     console.error('Error fetching inventory report:', error);

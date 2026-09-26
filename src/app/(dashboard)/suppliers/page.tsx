@@ -1,17 +1,9 @@
 import Link from 'next/link';
-import { getSuppliers, deleteSupplier } from '@/app/actions/suppliers';
-import { revalidatePath } from 'next/cache';
-import DeleteButton from '@/components/ui/DeleteButton';
+import { getSuppliers } from '@/app/actions/suppliers';
+import SupplierDeleteButton from '@/components/suppliers/SupplierDeleteButton';
 
 export default async function SuppliersList() {
   const items = await getSuppliers();
-
-  const handleDelete = async (formData: FormData) => {
-    'use server';
-    const id = formData.get('id') as string;
-    await deleteSupplier(id);
-    revalidatePath('/suppliers');
-  };
 
   return (
     <>
@@ -67,10 +59,7 @@ export default async function SuppliersList() {
                       <Link href={`/suppliers/edit/${item.id}`} className="me-3" title="Edit Supplier">
                         <img src="/assets/img/icons/edit.svg" alt="edit" />
                       </Link>
-                      <form action={handleDelete} className="d-inline">
-                        <input type="hidden" name="id" value={item.id} />
-                        <DeleteButton id={item.id} />
-                      </form>
+                      <SupplierDeleteButton id={item.id} name={item.name} />
                     </td>
                   </tr>
                 ))}

@@ -19,7 +19,10 @@ export async function createSale(
   paidAmount: number = 0,
   phone: string = "",
   note: string = "",
-  selectedCustomerId: string | null = null
+  selectedCustomerId: string | null = null,
+  shippingPrice: number = 0,
+  loaderPrice: number = 0,
+  unloadingPrice: number = 0
 ) {
   const supabase = await createClient();
 
@@ -74,16 +77,43 @@ export async function createSale(
     }
   }
 
+  const shipping = Math.max(0, Number(shippingPrice) || 0);
+  const loader = Math.max(0, Number(loaderPrice) || 0);
+  const unloading = Math.max(0, Number(unloadingPrice) || 0);
+  const chargeTotal = shipping + loader + unloading;
+  const saleTotal = Math.max(0, Number(totalAmount) || 0) + chargeTotal;
+
+  // When Loan Khata is not selected, checkout treats the sale as fully paid.
+  // The paid-amount input is only shown for loan sales, so its default of zero
+  // must not make a cash sale look unpaid on the receipt.
+  const cashPaid = isLoan
+    ? Math.max(0, Math.min(Number(paidAmount) || 0, saleTotal))
+    : saleTotal;
+  const effectivePaidAmount = cashPaid;
+  const remainingAmount = Math.max(0, saleTotal - effectivePaidAmount);
+  const effectivePaymentStatus = effectivePaidAmount >= saleTotal
+    ? 'paid'
+    : effectivePaidAmount > 0
+      ? 'partial'
+      : 'unpaid';
+
   // 2. Insert into sales table with status = pending
   const { error: saleError } = await supabase
     .from('sales')
     .insert([{ 
       id: saleId,
       invoice_number: invoiceNumber,
-      total_amount: totalAmount,
+      customer_id: customerId,
+      total_amount: saleTotal,
       subtotal: totalAmount,
+      loader_charges: chargeTotal,
+      shipping_price: shipping,
+      loader_price: loader,
+      unloading_price: unloading,
+      paid_amount: effectivePaidAmount,
+      remaining_amount: remainingAmount,
       order_status: 'pending', // NEW LOGIC: Always pending initially
-      payment_status: isLoan ? (paidAmount >= totalAmount ? 'paid' : (paidAmount > 0 ? 'partial' : 'unpaid')) : 'paid',
+      payment_status: isLoan ? effectivePaymentStatus : 'paid',
       notes: note ? note : (customerName ? customerName : 'Walk-in Customer'),
       sales_man: salesManName
     }]);
@@ -116,26 +146,7 @@ export async function createSale(
 
   // 4. (REMOVED) We DO NOT deduct inventory yet until approved!
 
-  // 5. Insert into customer_ledgers if loan
-  if (isLoan && customerId) {
-    const remainingAmount = totalAmount - paidAmount;
-    const { error: ledgerError } = await supabase
-      .from('customer_ledgers')
-      .insert([{
-        customer_id: customerId,
-        sale_id: saleId,
-        invoice_number: invoiceNumber,
-        total_amount: totalAmount,
-        paid_amount: paidAmount,
-        remaining_amount: remainingAmount,
-        remarks: note || 'Loan from POS'
-      }]);
-    if (ledgerError) {
-      console.error("Error creating ledger:", ledgerError);
-    }
-  }
-
-  // 6. Revalidate cache
+  // 5. Revalidate cache
   revalidatePath('/products');
   revalidatePath('/pos');
   revalidatePath('/sales');
@@ -151,11 +162,12 @@ export async function approveOrder(saleId: string) {
   // 1. Get sale details and items
   const { data: sale, error: saleError } = await supabase
     .from('sales')
-    .select('invoice_number, sale_items(*)')
+    .select('invoice_number, customer_id, total_amount, paid_amount, payment_status, order_status, sale_items(*)')
     .eq('id', saleId)
     .single();
 
   if (saleError || !sale) return { success: false, error: 'Sale not found' };
+  if (sale.order_status !== 'pending') return { success: false, error: 'Order has already been approved' };
 
   // 2. Deduct inventory
   const inventoryMovements = sale.sale_items.map((item: any) => ({
@@ -176,15 +188,124 @@ export async function approveOrder(saleId: string) {
     if (inventoryError) return { success: false, error: inventoryError.message };
   }
 
-  // 3. Update status to completed
+  // 3. Apply the customer's advance only after admin approval.
+  const { data: ledgerRow } = await supabase
+    .from('customer_ledgers')
+    .select('id, customer_id, total_amount, remaining_amount, paid_amount, remarks')
+    .eq('sale_id', saleId)
+    .maybeSingle();
+
+  let finalRemaining = 0;
+  let finalPaid = 0;
+  let ledgerCreated = false;
+  if (ledgerRow) {
+    let remarks: Record<string, unknown> = {};
+    try {
+      const parsed = JSON.parse(ledgerRow.remarks || '{}');
+      if (parsed && typeof parsed === 'object') remarks = parsed;
+    } catch {
+      remarks = {};
+    }
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('opening_balance')
+      .eq('id', ledgerRow.customer_id)
+      .maybeSingle();
+    const currentAdvance = Math.max(0, Number(customer?.opening_balance || 0));
+    const recordedAdvance = Math.max(0, Number(remarks.available_advance || 0));
+    const customerAdvance = Math.max(currentAdvance, recordedAdvance);
+    const cashPaid = Math.max(0, Number(remarks.cash_paid ?? ledgerRow.paid_amount ?? 0));
+    const invoiceRemaining = Math.max(0, Number(ledgerRow.total_amount || 0) - cashPaid);
+    const advanceApplied = Math.min(customerAdvance, invoiceRemaining);
+    finalPaid = cashPaid + advanceApplied;
+    finalRemaining = invoiceRemaining - advanceApplied;
+
+    remarks.advance_used = advanceApplied;
+    remarks.opening_advance = Number(remarks.opening_advance ?? customerAdvance);
+    remarks.available_advance = customerAdvance - advanceApplied;
+    remarks.paid_amount = finalPaid;
+    remarks.remaining_amount = finalRemaining;
+
+    const { error: ledgerUpdateError } = await supabase
+      .from('customer_ledgers')
+      .update({
+        paid_amount: finalPaid,
+        remaining_amount: finalRemaining,
+        remarks: JSON.stringify(remarks)
+      })
+      .eq('id', ledgerRow.id);
+    if (ledgerUpdateError) return { success: false, error: ledgerUpdateError.message };
+
+    if (advanceApplied > 0) {
+      const { error: customerUpdateError } = await supabase
+        .from('customers')
+        .update({ opening_balance: customerAdvance - advanceApplied })
+        .eq('id', ledgerRow.customer_id);
+      if (customerUpdateError) return { success: false, error: customerUpdateError.message };
+    }
+  } else if (sale.customer_id && sale.payment_status !== 'paid') {
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('opening_balance')
+      .eq('id', sale.customer_id)
+      .maybeSingle();
+    const customerAdvance = Math.max(0, Number(customer?.opening_balance || 0));
+    const cashPaid = Math.max(0, Number(sale.paid_amount || 0));
+    const invoiceRemaining = Math.max(0, Number(sale.total_amount || 0) - cashPaid);
+    const advanceApplied = Math.min(customerAdvance, invoiceRemaining);
+    finalPaid = cashPaid + advanceApplied;
+    finalRemaining = invoiceRemaining - advanceApplied;
+
+    const { error: ledgerInsertError } = await supabase
+      .from('customer_ledgers')
+      .insert([{
+        customer_id: sale.customer_id,
+        sale_id: saleId,
+        invoice_number: sale.invoice_number,
+        total_amount: sale.total_amount,
+        paid_amount: finalPaid,
+        remaining_amount: finalRemaining,
+        remarks: JSON.stringify({
+          type: 'loan_sale',
+          sale_total: sale.total_amount,
+          cash_paid: cashPaid,
+          opening_advance: customerAdvance,
+          advance_used: advanceApplied,
+          available_advance: customerAdvance - advanceApplied,
+          paid_amount: finalPaid,
+          remaining_amount: finalRemaining,
+          note: 'Loan from POS'
+        })
+      }]);
+    if (ledgerInsertError) return { success: false, error: ledgerInsertError.message };
+    ledgerCreated = true;
+
+    if (advanceApplied > 0) {
+      const { error: customerUpdateError } = await supabase
+        .from('customers')
+        .update({ opening_balance: customerAdvance - advanceApplied })
+        .eq('id', sale.customer_id);
+      if (customerUpdateError) return { success: false, error: customerUpdateError.message };
+    }
+  }
+
+  const finalPaymentStatus = ledgerRow || ledgerCreated
+    ? finalRemaining <= 0
+      ? 'paid'
+      : finalPaid > 0
+        ? 'partial'
+        : 'unpaid'
+    : 'paid';
+
   const { error: updateError } = await supabase
     .from('sales')
-    .update({ order_status: 'completed' })
+    .update({ order_status: 'completed', payment_status: finalPaymentStatus })
     .eq('id', saleId);
 
   if (updateError) return { success: false, error: updateError.message };
 
   revalidatePath('/dashboard');
+  revalidatePath('/sales');
   revalidatePath('/report/sales');
   revalidatePath('/report/profit-loss');
   revalidatePath('/report/inventory');
@@ -236,7 +357,7 @@ export async function getSaleById(saleId: string) {
   return { sale, customerName, phone, isLoan, paidAmount };
 }
 
-export async function updateSale(saleId: string, customerName: string, cartItems: CartItem[], totalAmount: number, isLoan: boolean = false, paidAmount: number = 0, phone: string = "", note: string = "") {
+export async function updateSale(saleId: string, customerName: string, cartItems: CartItem[], totalAmount: number, isLoan: boolean = false, paidAmount: number = 0, phone: string = "", note: string = "", shippingPrice: number = 0, loaderPrice: number = 0, unloadingPrice: number = 0, unallocatedCharges: number = 0) {
   const supabase = await createClient();
 
   // Fetch logged in user
@@ -277,13 +398,40 @@ export async function updateSale(saleId: string, customerName: string, cartItems
     }
   }
 
+  const { data: savedCustomer } = customerId
+    ? await supabase.from('customers').select('opening_balance').eq('id', customerId).single()
+    : { data: null };
+  const customerAdvance = Math.max(0, Number(savedCustomer?.opening_balance || 0));
+  const shipping = Math.max(0, Number(shippingPrice) || 0);
+  const loader = Math.max(0, Number(loaderPrice) || 0);
+  const unloading = Math.max(0, Number(unloadingPrice) || 0);
+  const chargeTotal = shipping + loader + unloading + Math.max(0, Number(unallocatedCharges) || 0);
+  const saleTotal = Math.max(0, Number(totalAmount) || 0) + chargeTotal;
+  const cashPaid = isLoan
+    ? Math.max(0, Math.min(Number(paidAmount) || 0, saleTotal))
+    : saleTotal;
+  const advanceApplied = 0;
+  const effectivePaidAmount = cashPaid;
+  const remainingAmount = Math.max(0, saleTotal - effectivePaidAmount);
+  const effectivePaymentStatus = effectivePaidAmount >= saleTotal
+    ? 'paid'
+    : effectivePaidAmount > 0
+      ? 'partial'
+      : 'unpaid';
+
   // 2. Update Sales Table
   const { error: saleError } = await supabase
     .from('sales')
     .update({ 
-      total_amount: totalAmount,
+      total_amount: saleTotal,
       subtotal: totalAmount,
-      payment_status: isLoan ? (paidAmount >= totalAmount ? 'paid' : (paidAmount > 0 ? 'partial' : 'unpaid')) : 'paid',
+      loader_charges: chargeTotal,
+      shipping_price: shipping,
+      loader_price: loader,
+      unloading_price: unloading,
+      paid_amount: effectivePaidAmount,
+      remaining_amount: remainingAmount,
+      payment_status: isLoan ? effectivePaymentStatus : 'paid',
       notes: note ? note : (customerName ? customerName : 'Walk-in Customer'),
       sales_man: salesManName
     })
@@ -314,19 +462,37 @@ export async function updateSale(saleId: string, customerName: string, cartItems
     // Get invoice number from sales
     const { data: saleInfo } = await supabase.from('sales').select('invoice_number').eq('id', saleId).single();
     const invoiceNumber = saleInfo?.invoice_number || `INV-${Date.now()}`;
-    
-    const remainingAmount = totalAmount - paidAmount;
+
+    const ledgerRemarks = JSON.stringify({
+      type: 'loan_sale',
+      sale_total: saleTotal,
+      cash_paid: cashPaid,
+      advance_used: 0,
+      available_advance: customerAdvance,
+      paid_amount: effectivePaidAmount,
+      remaining_amount: remainingAmount,
+      note: note || 'Loan from POS (Updated)'
+    });
+
     await supabase
       .from('customer_ledgers')
       .insert([{
         customer_id: customerId,
         sale_id: saleId,
         invoice_number: invoiceNumber,
-        total_amount: totalAmount,
-        paid_amount: paidAmount,
+        total_amount: saleTotal,
+        paid_amount: effectivePaidAmount,
         remaining_amount: remainingAmount,
-        remarks: note || 'Loan from POS (Updated)'
+        remarks: ledgerRemarks
       }]);
+  }
+
+  if (customerId && advanceApplied > 0) {
+    const { error: advanceError } = await supabase
+      .from('customers')
+      .update({ opening_balance: customerAdvance - advanceApplied })
+      .eq('id', customerId);
+    if (advanceError) return { success: false, error: advanceError.message };
   }
 
   revalidatePath('/dashboard');
@@ -414,10 +580,27 @@ export async function getDashboardStats() {
     });
   }
 
+  const { data: purchasesData } = await supabase
+    .from('purchases')
+    .select('total_amount, notes')
+    .gte('created_at', startOfDay)
+    .lte('created_at', endOfDay);
+
+  const todayTotalPurchases = (purchasesData || []).reduce((sum, purchase) => {
+    let isPending = false;
+    try {
+      isPending = JSON.parse(purchase.notes || '{}')?.type === 'pending_pop';
+    } catch {
+      isPending = false;
+    }
+    return isPending ? sum : sum + Number(purchase.total_amount || 0);
+  }, 0);
+
   return {
     totalEmployees: employeeCount || 0,
     pendingOrdersCount: pendingCount || 0,
-    todayTotalProfit: totalProfit
+    todayTotalProfit: totalProfit,
+    todayTotalPurchases,
   };
 }
 

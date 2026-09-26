@@ -38,6 +38,10 @@ export default function POSPage() {
   const [paidAmount, setPaidAmount] = useState('');
   const [phone, setPhone] = useState('');
   const [note, setNote] = useState('');
+  const [shippingPrice, setShippingPrice] = useState('0');
+  const [loaderPrice, setLoaderPrice] = useState('0');
+  const [unloadingPrice, setUnloadingPrice] = useState('0');
+  const [unallocatedCharges, setUnallocatedCharges] = useState(0);
   const [savedCustomers, setSavedCustomers] = useState<Array<{ id: string; name: string; phone?: string }>>([]);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
 
@@ -117,6 +121,15 @@ export default function POSPage() {
       setPhone(saleData.phone);
       setIsLoan(saleData.isLoan);
       setPaidAmount(saleData.paidAmount.toString());
+      const shipping = Number(saleData.sale.shipping_price || 0);
+      const loader = Number(saleData.sale.loader_price || 0);
+      const unloading = Number(saleData.sale.unloading_price || 0);
+      const storedCharges = shipping + loader + unloading;
+      const legacyCharges = Number(saleData.sale.loader_charges || 0);
+      setShippingPrice(String(shipping));
+      setLoaderPrice(String(loader));
+      setUnloadingPrice(String(unloading));
+      setUnallocatedCharges(Math.max(0, legacyCharges - storedCharges));
       
       // Load cart items (we assume products are loaded, but we just need id, name, price, quantity)
       // Actually, we can fetch name and stock from the `products` state, but `products` might not be loaded yet.
@@ -145,6 +158,12 @@ export default function POSPage() {
     .filter(p => p.effectiveStock > 0 && p.name.toLowerCase().includes(searchQuery.toLowerCase()));
   const cartUnits = Array.from(new Set(cart.map((item) => unitForProduct(item))));
   const cartQuantityHeading = cartUnits.length === 1 ? `QTY (${cartUnits[0]})` : 'QTY';
+  const cartSubtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const extraCharges = Math.max(0, Number(shippingPrice) || 0)
+    + Math.max(0, Number(loaderPrice) || 0)
+    + Math.max(0, Number(unloadingPrice) || 0)
+    + unallocatedCharges;
+  const saleTotal = cartSubtotal + extraCharges;
 
   const handleSelectProduct = (product: Product) => {
     setSelectedProduct(product);
@@ -216,17 +235,35 @@ export default function POSPage() {
   const handleCompleteSale = async () => {
     if (cart.length === 0) return;
     setIsProcessing(true);
-    const subtotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-    const result = await createSale(
-        customerName,
-        cart,
-        subtotal,
-        isLoan,
-        Number(paidAmount) || 0,
-        phone,
-        note,
-        selectedCustomerId
-      );
+    const subtotal = cartSubtotal;
+    const result = editSaleId
+      ? await updateSale(
+          editSaleId,
+          customerName,
+          cart,
+          subtotal,
+          isLoan,
+          Number(paidAmount) || 0,
+          phone,
+          note,
+          Number(shippingPrice) || 0,
+          Number(loaderPrice) || 0,
+          Number(unloadingPrice) || 0,
+          unallocatedCharges
+        )
+      : await createSale(
+          customerName,
+          cart,
+          subtotal,
+          isLoan,
+          Number(paidAmount) || 0,
+          phone,
+          note,
+          selectedCustomerId,
+          Number(shippingPrice) || 0,
+          Number(loaderPrice) || 0,
+          Number(unloadingPrice) || 0
+        );
     
     setIsProcessing(false);
     if (result.success) {
@@ -237,6 +274,10 @@ export default function POSPage() {
         setPaidAmount('');
         setPhone('');
         setNote('');
+        setShippingPrice('0');
+        setLoaderPrice('0');
+        setUnloadingPrice('0');
+        setUnallocatedCharges(0);
       const Toast = Swal.mixin({
         toast: true,
         position: 'top-end',
@@ -248,7 +289,13 @@ export default function POSPage() {
         icon: 'success',
         title: 'Order completed successfully'
       });
-      if (result.saleId) { router.push(`/pos/receipt/${result.saleId}`); } else { alert('Server did not return a saleId. Please restart your dev server.'); }
+      if (editSaleId) {
+        router.push('/dashboard');
+      } else if ('saleId' in result && result.saleId) {
+        router.push(`/pos/receipt/${result.saleId}`);
+      } else {
+        alert('Server did not return a saleId. Please restart your dev server.');
+      }
     } else {
       Swal.fire('Error', result.error || 'Failed to complete sale', 'error');
     }
@@ -469,14 +516,51 @@ export default function POSPage() {
               )}
             </tbody>
           </table>
-          
+
           {/* Cart Totals Bottom Bar */}
           {cart.length > 0 && (
             <div style={{ backgroundColor: '#fff', padding: '20px', borderTop: '1px solid #ddd', display: 'flex', justifyContent: 'flex-end' }}>
-              <div style={{ width: '300px' }}>
+              <div style={{ width: '380px', maxWidth: '100%' }}>
+                <div style={{ display: 'flex', flexWrap: 'nowrap', gap: '8px', marginBottom: '16px' }}>
+                  {[
+                    { label: 'Shipping price', value: shippingPrice, setValue: setShippingPrice },
+                    { label: 'Loader price', value: loaderPrice, setValue: setLoaderPrice },
+                    { label: 'Unloading price', value: unloadingPrice, setValue: setUnloadingPrice },
+                  ].map((charge) => (
+                    <div key={charge.label} style={{ flex: '1 1 0', minWidth: 0 }}>
+                      <label style={{ display: 'block', marginBottom: '5px', fontSize: '11px', lineHeight: 1.2, color: '#555', whiteSpace: 'nowrap' }}>{charge.label}</label>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        value={charge.value}
+                        onChange={(event) => {
+                          charge.setValue(event.target.value);
+                          setUnallocatedCharges(0);
+                        }}
+                        style={{ boxSizing: 'border-box', width: '100%', minWidth: 0, padding: '7px 8px', border: '1px solid #ccc', borderRadius: '4px' }}
+                      />
+                    </div>
+                  ))}
+                </div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
                   <span>Subtotal:</span>
-                  <span style={{ fontWeight: 600 }}>Rs. {cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}</span>
+                  <span style={{ fontWeight: 600 }}>Rs. {cartSubtotal.toFixed(2)}</span>
+                </div>
+                {extraCharges > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
+                    <span>Charges:</span>
+                    <span style={{ fontWeight: 600 }}>Rs. {extraCharges.toFixed(2)}</span>
+                  </div>
+                )}
+                {unallocatedCharges > 0 && (
+                  <div style={{ marginTop: '-6px', marginBottom: '10px', fontSize: '11px', color: '#777', textAlign: 'right' }}>
+                    Existing combined charges (not split by type): Rs. {unallocatedCharges.toFixed(2)}. Enter the three charges to replace this amount.
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px', fontSize: '17px', color: '#333' }}>
+                  <span>Total:</span>
+                  <span style={{ fontWeight: 700 }}>Rs. {saleTotal.toFixed(2)}</span>
                 </div>
                 <button 
                   onClick={() => setShowCheckoutModal(true)}
@@ -565,7 +649,7 @@ export default function POSPage() {
               <div style={{ marginBottom: '25px', padding: '15px', backgroundColor: '#f8f9fa', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontWeight: 500 }}>Total Amount:</span>
                 <span style={{ fontSize: '20px', fontWeight: 700, color: '#ff9f43' }}>
-                  Rs. {cart.reduce((sum, item) => sum + (item.price * item.quantity), 0).toFixed(2)}
+                  Rs. {saleTotal.toFixed(2)}
                 </span>
               </div>
 
@@ -605,7 +689,7 @@ export default function POSPage() {
                   disabled={isProcessing}
                   style={{ flex: 1, padding: '12px', backgroundColor: '#ff9f43', color: '#fff', border: 'none', borderRadius: '6px', cursor: isProcessing ? 'not-allowed' : 'pointer', fontWeight: 600, opacity: isProcessing ? 0.7 : 1 }}
                 >
-                  {isProcessing ? 'Processing...' : 'Confirm Order'}
+                  {isProcessing ? 'Processing...' : editSaleId ? 'Update Order' : 'Confirm Order'}
                 </button>
               </div>
             </div>

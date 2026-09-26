@@ -23,6 +23,27 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
     .eq('sale_id', id)
     .maybeSingle();
 
+  const customerId = ledgerRow?.customer_id || sale?.customer_id;
+  const { data: customer } = customerId
+    ? await supabase
+      .from('customers')
+      .select('opening_balance')
+      .eq('id', customerId)
+      .maybeSingle()
+    : { data: null };
+
+  const parseLedgerMeta = (value: string | null | undefined) => {
+    if (!value) return null;
+    try {
+      const parsed = JSON.parse(value);
+      return typeof parsed === 'object' && parsed ? parsed : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const ledgerMeta = parseLedgerMeta((ledgerRow as any)?.remarks || null);
+
   if (saleError || !sale) {
     return (
       <div style={{ padding: '50px', textAlign: 'center' }}>
@@ -36,8 +57,21 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
   // Calculate total quantity for challan
   const totalQty = sale.items.reduce((sum: number, item: any) => sum + Number(item.quantity), 0);
   const customerName = sale.notes ? sale.notes.replace('Walk-in Customer: ', '') : 'Walk-in Customer';
-  const displayPaidAmount = ledgerRow ? Number(ledgerRow.paid_amount || 0) : Number(sale.total_amount || 0);
-  const remainingAmount = ledgerRow ? Number(ledgerRow.remaining_amount || 0) : 0;
+  const saleTotal = Number(sale.total_amount || 0);
+  const saleCharges = Math.max(0, Number(sale.loader_charges || 0));
+  const ledgerCashPaid = Number(ledgerMeta?.cash_paid ?? ledgerRow?.paid_amount ?? sale.paid_amount ?? 0);
+  const ledgerAdvanceUsed = Number(ledgerMeta?.advance_used ?? 0);
+  const availableAdvance = sale.order_status === 'pending'
+    ? Math.max(0, Number(ledgerMeta?.available_advance ?? customer?.opening_balance ?? 0))
+    : Math.max(0, Number(customer?.opening_balance ?? ledgerMeta?.available_advance ?? 0));
+  const displayAdvance = sale.order_status === 'pending'
+    ? availableAdvance
+    : ledgerAdvanceUsed;
+  const displayPaidAmount = ledgerCashPaid;
+  const netBalance = availableAdvance - saleTotal + ledgerCashPaid;
+  const remainingAmount = sale.order_status === 'pending'
+    ? Math.abs(netBalance)
+    : Math.max(0, Number(ledgerRow?.remaining_amount || 0));
 
   return (
     <div style={{ minHeight: '80vh', padding: '40px' }}>
@@ -98,17 +132,37 @@ export default async function ReceiptPage({ params }: { params: Promise<{ id: st
           </table>
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', borderTop: '2px dashed #eee', paddingTop: '20px' }}>
-            <div style={{ width: '270px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '22px', fontWeight: 700, color: '#111' }}>
+            <div style={{ width: '300px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
+                <span>{saleCharges > 0 ? 'Subtotal:' : 'Total:'}</span>
+                <span>Rs. {Math.max(0, saleTotal - saleCharges).toFixed(2)}</span>
+              </div>
+              {saleCharges > 0 && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
+                    <span>Charges:</span>
+                    <span>Rs. {saleCharges.toFixed(2)}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
+                    <span>Total:</span>
+                    <span>Rs. {saleTotal.toFixed(2)}</span>
+                  </div>
+                </>
+              )}
+              {sale.payment_status !== 'paid' && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
+                  <span>Advance:</span>
+                  <span style={{ color: '#ea5455', fontWeight: 600 }}>Rs. {displayAdvance.toFixed(2)}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
                 <span>Total Paid:</span>
                 <span>Rs. {displayPaidAmount.toFixed(2)}</span>
               </div>
-              {remainingAmount > 0 && (
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '16px', color: '#555' }}>
-                  <span>Remaining:</span>
-                  <span>Rs. {remainingAmount.toFixed(2)}</span>
-                </div>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '22px', fontWeight: 700, color: '#111' }}>
+                <span>Remaining:</span>
+                <span>Rs. {remainingAmount.toFixed(2)}</span>
+              </div>
             </div>
           </div>
           

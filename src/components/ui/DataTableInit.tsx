@@ -7,12 +7,12 @@ export default function DataTableInit() {
   const pathname = usePathname();
 
   useEffect(() => {
-    // Small delay to ensure the DOM is fully rendered by Next.js Server Components
-    const timer = setTimeout(() => {
-      if (typeof window !== 'undefined' && (window as any).$) {
-        const $ = (window as any).$;
-        
-        $('.datanew').each(function(this: HTMLTableElement) {
+    const initializeTables = () => {
+      const jquery = (window as any).$;
+      if (!jquery || typeof jquery.fn?.DataTable !== 'function') return;
+
+      const $ = jquery;
+      $('.datanew').each(function(this: HTMLTableElement) {
           const columnCount = this.tHead?.rows[0]?.cells.length || 0;
           const hasCompatibleRows = Array.from(this.tBodies).every((body) =>
             Array.from(body.rows).every((row) => row.cells.length === columnCount)
@@ -54,11 +54,21 @@ export default function DataTableInit() {
           $('a[title="pdf"]').off('click').on('click', function(e: any) { e.preventDefault(); table.button(0).trigger(); });
           $('a[title="excel"]').off('click').on('click', function(e: any) { e.preventDefault(); table.button(1).trigger(); });
           $('a[title="print"]').off('click').on('click', function(e: any) { e.preventDefault(); table.button(2).trigger(); });
-        });
-      }
-    }, 100);
+      });
+    };
 
-    return () => clearTimeout(timer);
+    const timer = window.setTimeout(initializeTables, 100);
+    const handleScriptsReady = () => initializeTables();
+    window.addEventListener('legacy-scripts-ready', handleScriptsReady);
+
+    if ((window as Window & { __legacyScriptsReady?: boolean }).__legacyScriptsReady) {
+      initializeTables();
+    }
+
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('legacy-scripts-ready', handleScriptsReady);
+    };
   }, [pathname]);
 
   return null;

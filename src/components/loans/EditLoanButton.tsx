@@ -2,19 +2,23 @@
 
 import React, { useState } from 'react';
 import EditLoanModal from './EditLoanModal';
+import LoanHistoryModal from './LoanHistoryModal';
 import { deleteLoanLedger, updateLoanBalance } from '@/app/actions/loans';
 
 type EditLoanButtonProps = {
   ledgerId: string;
   currentRemaining: number;
   type: 'customer' | 'supplier';
+  remarks?: string | null;
 };
 
-export default function EditLoanButton({ ledgerId, currentRemaining, type }: EditLoanButtonProps) {
+export default function EditLoanButton({ ledgerId, currentRemaining, type, remarks }: EditLoanButtonProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
 
   const handleUpdate = async (amount: number, remarks: string) => {
-    const res = await updateLoanBalance(type, ledgerId, amount, remarks);
+    const submittedAmount = currentRemaining < 0 ? -Math.abs(amount) : Math.abs(amount);
+    const res = await updateLoanBalance(type, ledgerId, submittedAmount, remarks);
     if (res.success) {
       window.location.reload();
     } else {
@@ -79,6 +83,14 @@ export default function EditLoanButton({ ledgerId, currentRemaining, type }: Edi
 
   return (
     <div style={{ display: 'inline-flex', alignItems: 'center', gap: '12px' }}>
+      <button
+        type="button"
+        onClick={() => setIsHistoryOpen(true)}
+        style={{ background: 'transparent', border: 'none', padding: 0, cursor: 'pointer', color: '#7367f0' }}
+        aria-label="View loan history"
+      >
+        View
+      </button>
       <a 
         href="#" 
         onClick={(e) => {
@@ -105,6 +117,13 @@ export default function EditLoanButton({ ledgerId, currentRemaining, type }: Edi
         onSubmit={handleUpdate}
         currentRemaining={currentRemaining}
         type={type}
+      />
+      <LoanHistoryModal
+        isOpen={isHistoryOpen}
+        onClose={() => setIsHistoryOpen(false)}
+        remarks={remarks || undefined}
+        type={type}
+        ledgerId={ledgerId}
       />
     </div>
   );

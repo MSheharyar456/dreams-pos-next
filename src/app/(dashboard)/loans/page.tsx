@@ -11,7 +11,14 @@ export default async function LoansPage() {
   ]);
   
   // Combine ledger entries with customers/suppliers that have opening balance but no ledger entries
-  const allCustomerData = [...customerLedgers, ...customersWithOBOnly];
+  // Filter out cleared invoices (remaining=0 with invoice_number) to match ledger detail view
+  const allCustomerData = [...customerLedgers, ...customersWithOBOnly].filter(item => {
+    if (!item.invoice_number) return true; // Advance rows always count
+    const remaining = Number(item.remaining_amount || 0);
+    const isNewSystemLoan = typeof item.remarks === 'string' && item.remarks.includes('"loan_sale"');
+    return Math.abs(remaining) > 0.009 || isNewSystemLoan; // Only count invoices with active balance or new system invoices
+  });
+
   const allSupplierData = [...supplierLedgers, ...suppliersWithOBOnly];
   
   console.log('\n📊 [LOANS PAGE] Fetched customer ledgers:', customerLedgers.length, 'records');
@@ -44,12 +51,8 @@ export default async function LoansPage() {
   supplierLedgers.forEach((ledger, idx) => {
     console.log(`   Ledger ${idx + 1}: Supplier="${ledger.suppliers?.name}", opening_balance=${ledger.suppliers?.opening_balance}, remaining=${ledger.remaining_amount}`);
   });
-  
   console.log('📊 [LOANS PAGE] Fetched suppliers with opening_balance only:', suppliersWithOBOnly.length, 'records');
-  suppliersWithOBOnly.forEach((supplier, idx) => {
-    console.log(`   Supplier ${idx + 1}: name="${supplier.suppliers?.name}", opening_balance=${supplier.suppliers?.opening_balance}`);
-  });
-
+  
   const supplierToPay = allSupplierData.reduce((sum, ledger) => {
     const remaining = Number(ledger.remaining_amount || 0);
     const toAdd = Math.max(0, remaining); // Only use remaining amount

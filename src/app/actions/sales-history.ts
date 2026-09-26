@@ -8,6 +8,7 @@ export async function getSalesHistory() {
   const { data: sales, error } = await supabase
     .from('sales')
     .select('*, items:sale_items(*)')
+    .eq('order_status', 'completed')
     .order('created_at', { ascending: false });
 
   if (error) {

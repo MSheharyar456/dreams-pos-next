@@ -46,23 +46,31 @@ export async function createPurchase(
   const unloading = numberValue(unloadingPrice);
   const charges = shipping + loader + unloading;
   const totalAmount = itemSubtotal + charges;
-  const paid = Math.max(0, Math.min(numberValue(paidAmount), totalAmount));
+
+  const { data: supplier } = await supabase.from('suppliers').select('id, opening_balance').eq('id', supplierId).single();
+  if (!supplier) return { success: false, error: 'Supplier was not found.' };
+
+  const cashPaid = Math.max(0, Math.min(numberValue(paidAmount), totalAmount));
+  const availableAdvance = Math.max(0, numberValue(supplier.opening_balance));
+  const advanceApplied = Math.min(availableAdvance, totalAmount - cashPaid);
+  const paid = cashPaid + advanceApplied;
   const remaining = totalAmount - paid;
   const paymentStatus = remaining === 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
 
-  const { data: supplier } = await supabase.from('suppliers').select('id').eq('id', supplierId).single();
-  if (!supplier) return { success: false, error: 'Supplier was not found.' };
-
-  const resolvedItems: Array<{ variantId: string; quantity: number; unitCost: number }> = [];
-  for (const item of validItems) {
-    const update: Record<string, number> = { purchase_price: numberValue(item.purchasePrice) };
-    if (item.updateSalePrice) update.sale_price = numberValue(item.salePrice);
-    const { error } = await supabase.from('product_variants').update(update).eq('id', item.variantId);
-    if (error) return { success: false, error: error.message };
-    resolvedItems.push({ variantId: item.variantId!, quantity: numberValue(item.quantity), unitCost: numberValue(item.purchasePrice) });
-  }
-
   const purchaseNumber = `PUR-${Date.now()}`;
+  const pendingNotes = JSON.stringify({
+    type: 'pending_pop',
+    note: notes.trim(),
+    cartItems: validItems,
+    shippingPrice: shipping,
+    loaderPrice: loader,
+    unloadingPrice: unloading,
+    cashPaid,
+    openingAdvance: availableAdvance,
+    advanceUsed: advanceApplied,
+    availableAdvance: availableAdvance - advanceApplied,
+    createdByName: createdByName.trim() || 'Unknown',
+  });
   const { data: purchase, error: purchaseError } = await supabase
     .from('purchases')
     .insert({
@@ -74,10 +82,10 @@ export async function createPurchase(
       unloading_price: unloading,
       other_charges: charges,
       total_amount: totalAmount,
-      paid_amount: paid,
-      remaining_amount: remaining,
-      payment_status: paymentStatus,
-      notes: notes.trim() || null,
+      paid_amount: cashPaid,
+      remaining_amount: totalAmount - cashPaid,
+      payment_status: 'unpaid',
+      notes: pendingNotes,
       created_by: user.id,
       created_by_name: createdByName.trim() || 'Unknown',
     })
@@ -85,27 +93,90 @@ export async function createPurchase(
     .single();
   if (purchaseError || !purchase) return { success: false, error: purchaseError?.message || 'Could not save the purchase.' };
 
-  const { error: itemError } = await supabase.from('purchase_items').insert(resolvedItems.map((item) => ({ purchase_id: purchase.id, product_variant_id: item.variantId, quantity: item.quantity, unit_cost: item.unitCost, total: item.quantity * item.unitCost })));
-  if (itemError) return { success: false, error: itemError.message };
-
-  // The live project uses the existing supplier-loan ledger shape (not the newer
-  // debit/credit schema): one invoice row carries its total, paid, and balance.
-  const { error: ledgerError } = await supabase.from('supplier_ledger').insert({
-    supplier_id: supplierId,
-    invoice_number: purchase.purchase_number,
-    total_amount: totalAmount,
-    paid_amount: paid,
-    remaining_amount: remaining,
-    remarks: notes.trim() || 'Purchase POP invoice',
-  });
-  if (ledgerError) return { success: false, error: ledgerError.message };
-
   revalidatePath('/suppliers');
+  revalidatePath('/loans');
+  revalidatePath('/loans/suppliers');
   revalidatePath(`/suppliers/${supplierId}/products`);
   revalidatePath(`/suppliers/${supplierId}/purchases`);
   revalidatePath('/products');
   revalidatePath('/report/inventory');
   return { success: true, purchaseId: purchase.id };
+}
+
+export async function approvePurchase(purchaseId: string) {
+  const supabase = await createClient();
+  const { data: purchase, error } = await supabase.from('purchases').select('*').eq('id', purchaseId).single();
+  if (error || !purchase) return { success: false, error: 'Purchase not found.' };
+
+  let pending: any;
+  try { pending = purchase.notes ? JSON.parse(purchase.notes) : null; } catch { pending = null; }
+  if (!pending || pending.type !== 'pending_pop') return { success: false, error: 'Purchase is already approved.' };
+
+  const items = Array.isArray(pending.cartItems) ? pending.cartItems : [];
+  const totalAmount = Number(purchase.total_amount || 0);
+  const cashPaid = Math.max(0, Math.min(Number(pending.cashPaid || 0), totalAmount));
+  const { data: supplier } = await supabase.from('suppliers').select('opening_balance').eq('id', purchase.supplier_id).single();
+  const openingAdvance = Math.max(0, Number(supplier?.opening_balance || 0));
+  const advanceUsed = Math.min(openingAdvance, totalAmount - cashPaid);
+  const paid = cashPaid + advanceUsed;
+  const remaining = totalAmount - paid;
+  const availableAdvance = openingAdvance - advanceUsed;
+  const ledgerRemaining = remaining - availableAdvance;
+
+  const { error: itemsError } = await supabase.from('purchase_items').insert(items.map((item: any) => ({
+    purchase_id: purchase.id,
+    product_variant_id: item.variantId,
+    quantity: Number(item.quantity),
+    unit_cost: Number(item.purchasePrice),
+    total: Number(item.quantity) * Number(item.purchasePrice),
+  })));
+  if (itemsError) return { success: false, error: itemsError.message };
+
+  for (const item of items) {
+    const productUpdate: Record<string, number> = { purchase_price: Number(item.purchasePrice) };
+    if (item.updateSalePrice) productUpdate.sale_price = Number(item.salePrice);
+    const { error: productError } = await supabase
+      .from('product_variants')
+      .update(productUpdate)
+      .eq('id', item.variantId);
+    if (productError) return { success: false, error: productError.message };
+  }
+
+  if (advanceUsed > 0) {
+    const { error: advanceError } = await supabase.from('suppliers').update({ opening_balance: openingAdvance - advanceUsed }).eq('id', purchase.supplier_id);
+    if (advanceError) return { success: false, error: advanceError.message };
+  }
+  const { error: ledgerError } = await supabase.from('supplier_ledger').insert({
+    supplier_id: purchase.supplier_id,
+    invoice_number: purchase.purchase_number,
+    total_amount: totalAmount,
+    paid_amount: cashPaid,
+    remaining_amount: ledgerRemaining,
+    remarks: JSON.stringify({ type: 'purchase_pop', note: pending.note || 'Purchase POP invoice', cash_paid: cashPaid, opening_advance: openingAdvance, advance_used: advanceUsed, available_advance: availableAdvance, remaining_amount: remaining, ledger_remaining: ledgerRemaining }),
+  });
+  if (ledgerError) return { success: false, error: ledgerError.message };
+
+  await supabase.from('purchases').update({ paid_amount: paid, remaining_amount: remaining, payment_status: remaining === 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid', notes: pending.note || null }).eq('id', purchase.id);
+  revalidatePath(`/suppliers/${purchase.supplier_id}/purchases`);
+  revalidatePath('/loans/suppliers');
+  revalidatePath(`/suppliers/${purchase.supplier_id}/purchases/${purchase.id}`);
+  return { success: true };
+}
+
+export async function getPendingPurchases() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('purchases')
+    .select('id, supplier_id, purchase_number, total_amount, paid_amount, remaining_amount, notes, created_at, suppliers(name)')
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return (data || []).filter((purchase: any) => {
+    try {
+      return JSON.parse(purchase.notes || '{}')?.type === 'pending_pop';
+    } catch {
+      return false;
+    }
+  });
 }
 
 export async function getPurchasesBySupplier(supplierId: string) {
@@ -115,15 +186,30 @@ export async function getPurchasesBySupplier(supplierId: string) {
   return data || [];
 }
 
+export async function getAllPurchases() {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from('purchases')
+    .select('*, purchase_items(quantity, total), suppliers(name)')
+    .order('created_at', { ascending: false });
+  if (error) return [];
+  return data || [];
+}
+
 export async function getPurchaseById(purchaseId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from('purchases')
-    .select('*, supplier:suppliers(name, phone, address), items:purchase_items(*, variant:product_variants(variant_name, sale_price, product:products(id, name)))')
+    .select('*, supplier:suppliers(name, phone, address, opening_balance), items:purchase_items(*, variant:product_variants(variant_name, sale_price, product:products(id, name)))')
     .eq('id', purchaseId)
     .single();
   if (error) return null;
-  return data;
+  const { data: ledger } = await supabase
+    .from('supplier_ledger')
+    .select('remarks')
+    .eq('invoice_number', data.purchase_number)
+    .maybeSingle();
+  return { ...data, ledger };
 }
 
 export async function deletePurchase(purchaseId: string, supplierId: string) {
@@ -189,7 +275,17 @@ export async function updatePurchase(
   const unloading = numberValue(unloadingPrice);
   const charges = shipping + loader + unloading;
   const totalAmount = itemSubtotal + charges;
-  const paid = Math.max(0, Math.min(numberValue(paidAmount), totalAmount));
+  const { data: supplier } = await supabase
+    .from('suppliers')
+    .select('id, opening_balance')
+    .eq('id', supplierId)
+    .single();
+  if (!supplier) return { success: false, error: 'Supplier was not found.' };
+
+  const cashPaid = Math.max(0, Math.min(numberValue(paidAmount), totalAmount));
+  const availableAdvance = Math.max(0, numberValue(supplier.opening_balance));
+  const advanceApplied = Math.min(availableAdvance, totalAmount - cashPaid);
+  const paid = cashPaid + advanceApplied;
   const remaining = totalAmount - paid;
   const paymentStatus = remaining === 0 ? 'paid' : paid > 0 ? 'partial' : 'unpaid';
 
@@ -240,6 +336,13 @@ export async function updatePurchase(
   );
   if (itemError) return { success: false, error: itemError.message };
 
+  if (advanceApplied > 0) {
+    const { error: advanceError } = await supabase
+      .from('suppliers')
+      .update({ opening_balance: availableAdvance - advanceApplied })
+      .eq('id', supplierId);
+    if (advanceError) return { success: false, error: advanceError.message };
+  }
   // Update supplier ledger - delete old and insert new
   await supabase.from('supplier_ledger').delete().eq('invoice_number', purchase.purchase_number);
   const { error: ledgerError } = await supabase.from('supplier_ledger').insert({
@@ -253,6 +356,9 @@ export async function updatePurchase(
   if (ledgerError) return { success: false, error: ledgerError.message };
 
   revalidatePath(`/suppliers/${supplierId}/purchases`);
+  revalidatePath('/suppliers');
+  revalidatePath('/loans');
+  revalidatePath('/loans/suppliers');
   revalidatePath(`/suppliers/${supplierId}/products`);
   revalidatePath('/products');
   revalidatePath('/report/inventory');

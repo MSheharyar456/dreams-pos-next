@@ -23,6 +23,12 @@ export default function Sidebar() {
                 <span> Dashboard</span>
               </Link>
             </li>
+            <li className={pathname === '/purchase-dashboard' ? 'active' : ''}>
+              <Link href="/purchase-dashboard">
+                <img src="/assets/img/icons/product.svg" alt="img" />
+                <span> Purchase Dashboard</span>
+              </Link>
+            </li>
             
             <li className="submenu">
               <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('Product'); }} className={openSubmenu === 'Product' ? 'subdrop' : ''}>
@@ -48,6 +54,7 @@ export default function Sidebar() {
               </a>
               <ul style={{ display: openSubmenu === 'Sales' ? 'block' : 'none' }}>
                 <li><Link href="/sales" className={pathname === '/sales' ? 'active' : ''}>Sales List</Link></li>
+                <li><Link href="/purchases" className={pathname === '/purchases' ? 'active' : ''}>Purchase List</Link></li>
                 <li><Link href="/pos" className={pathname === '/pos' ? 'active' : ''}>POS</Link></li>
                 <li><Link href="/sales/new" className={pathname === '/sales/new' ? 'active' : ''}>New Sales</Link></li>
                 <li><Link href="/sales/returns" className={pathname === '/sales/returns' ? 'active' : ''}>Sales Return List</Link></li>

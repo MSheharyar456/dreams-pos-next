@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Swal from 'sweetalert2';
 import { formatSignedAmount } from '@/lib/finance';
 
 type EditLoanModalProps = {
@@ -18,9 +19,35 @@ export default function EditLoanModal({ isOpen, onClose, onSubmit, currentRemain
 
   if (!isOpen) return null;
 
+  const isNeedReceive = type === 'supplier' ? currentRemaining < 0 : currentRemaining >= 0;
+  const balanceLabel = isNeedReceive ? 'Need Receive' : 'Need Pay';
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || isNaN(Number(amount))) return;
+
+    const confirmation = await Swal.fire({
+      icon: 'question',
+      title: 'Confirm balance adjustment',
+      text: `Are you sure you want to add Rs. ${Number(amount).toFixed(2)} to ${balanceLabel}?`,
+      showCancelButton: true,
+      confirmButtonText: 'Yes, continue',
+      cancelButtonText: 'Cancel',
+      confirmButtonColor: '#28c76f',
+      cancelButtonColor: '#6c757d',
+      reverseButtons: true,
+      heightAuto: false,
+      customClass: {
+        container: 'loan-adjustment-confirmation-container',
+      },
+      didOpen: () => {
+        const container = document.querySelector('.loan-adjustment-confirmation-container');
+        if (container instanceof HTMLElement) {
+          container.style.zIndex = '10001';
+        }
+      },
+    });
+    if (!confirmation.isConfirmed) return;
     
     setIsSubmitting(true);
     try {
@@ -58,20 +85,22 @@ export default function EditLoanModal({ isOpen, onClose, onSubmit, currentRemain
           
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#555', fontSize: '15px' }}>
-              Current Remaining Balance: <span style={{ color: '#ea5455' }}>{formatSignedAmount(currentRemaining)}</span>
+              Current {balanceLabel} Balance: <span style={{ color: isNeedReceive ? '#28c76f' : '#ea5455' }}>{formatSignedAmount(Math.abs(currentRemaining))}</span>
             </label>
           </div>
 
           <div style={{ marginBottom: '20px' }}>
             <label style={{ display: 'block', marginBottom: '8px', fontWeight: 600, color: '#555' }}>
-              Amount to adjust balance
+              {type === 'customer' && !isNeedReceive
+                ? 'Amount to reduce Need Pay'
+                : 'Amount'}
             </label>
             <input 
               type="number" 
               step="0.01"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Enter amount to adjust the current loan"
+              min="0"
+              onChange={(e) => setAmount(e.target.value.replace(/-/g, ''))}
               style={{ width: '100%', padding: '12px', border: '1px solid #ccc', borderRadius: '6px', fontSize: '15px' }}
               required
             />

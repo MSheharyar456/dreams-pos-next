@@ -47,6 +47,7 @@ export default async function NewSupplierPurchase({ params }: { params: Promise<
     <PurchasePOS
       supplierId={id}
       supplierName={supplier.name}
+      supplierAdvance={Number(supplier.opening_balance || 0)}
       catalog={catalog}
       currentUserEmail={employeeName}
     />

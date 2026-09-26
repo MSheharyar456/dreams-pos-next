@@ -1,17 +1,9 @@
 import Link from 'next/link';
-import { getCustomers, deleteCustomer } from '@/app/actions/customers';
-import { revalidatePath } from 'next/cache';
-import DeleteButton from '@/components/ui/DeleteButton';
+import { getCustomers } from '@/app/actions/customers';
+import CustomerDeleteButton from '@/components/customers/CustomerDeleteButton';
 
 export default async function CustomersList() {
   const items = await getCustomers();
-
-  const handleDelete = async (formData: FormData) => {
-    'use server';
-    const id = formData.get('id') as string;
-    await deleteCustomer(id);
-    revalidatePath('/customers');
-  };
 
   return (
     <>
@@ -57,10 +49,7 @@ export default async function CustomersList() {
                         <Link href={`/customers/edit/${item.id}`} className="me-3">
                           <img src="/assets/img/icons/edit.svg" alt="edit" />
                         </Link>
-                        <form action={handleDelete} className="d-inline">
-                          <input type="hidden" name="id" value={item.id} />
-                          <DeleteButton id={item.id} />
-                        </form>
+                        <CustomerDeleteButton id={item.id} name={item.name} />
                       </td>
                     </tr>
                   ))
