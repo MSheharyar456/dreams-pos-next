@@ -161,7 +161,7 @@ export default async function LedgerPage() {
                   const remaining = toSignedNumber(item.remaining_amount);
                   const receive = Math.max(0, remaining); // Positive = to receive
                   const pay = Math.max(0, -remaining); // Negative shown as positive = to pay
-                  let ledgerMeta: { type?: string; note?: string; cash_paid?: number; advance_used?: number; available_advance?: number; adjustment_history?: Array<{ balance_after?: number }> } = {};
+                  let ledgerMeta: { type?: string; note?: string; cash_paid?: number; advance_used?: number; available_advance?: number; opening_advance?: number; adjustment_history?: Array<{ balance_after?: number }> } = {};
                   try {
                     const parsed = item.remarks ? JSON.parse(item.remarks) : {};
                     if (parsed && typeof parsed === 'object') ledgerMeta = parsed;

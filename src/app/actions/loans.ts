@@ -639,7 +639,7 @@ export async function updateLoanBalance(type: 'customer' | 'supplier', ledgerId:
   if (type === 'customer') {
     const { data: currentLedger } = await supabase
       .from('customer_ledgers')
-      .select('customer_id, invoice_number, total_amount, paid_amount, remaining_amount, remarks')
+      .select('id, customer_id, invoice_number, total_amount, paid_amount, remaining_amount, remarks')
       .eq('id', ledgerId)
       .maybeSingle();
     const customerId = currentLedger?.customer_id || ledgerId.replace(/-advance$/, '');
