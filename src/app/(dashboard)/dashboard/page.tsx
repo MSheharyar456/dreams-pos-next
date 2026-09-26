@@ -113,10 +113,23 @@ export default function Dashboard() {
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="page-title">
           <h4>Admin Dashboard</h4>
           <h6>Manage your Pending Orders</h6>
+        </div>
+        <div className="d-flex align-items-center flex-wrap gap-3">
+          <div className="btn-group shadow-sm" role="group" aria-label="Choose dashboard">
+            <Link href="/dashboard" aria-current="page" className="btn btn-warning text-white fw-semibold px-4">
+              <i className="fa fa-chart-line me-2" aria-hidden="true"></i>Sales
+            </Link>
+            <Link href="/purchase-dashboard" className="btn btn-outline-secondary fw-semibold px-4">
+              <i className="fa fa-shopping-bag me-2" aria-hidden="true"></i>Purchase
+            </Link>
+          </div>
+          <Link href="/pos" className="btn btn-added">
+            <img src="/assets/img/icons/plus.svg" alt="" className="me-1" />Add Sale
+          </Link>
         </div>
       </div>
       

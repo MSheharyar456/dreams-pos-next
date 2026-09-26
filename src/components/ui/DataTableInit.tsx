@@ -12,6 +12,7 @@ export default function DataTableInit() {
       if (!jquery || typeof jquery.fn?.DataTable !== 'function') return;
 
       const $ = jquery;
+      const listControlsPath = pathname === '/sales' || pathname === '/purchases';
       $('.datanew').each(function(this: HTMLTableElement) {
           const columnCount = this.tHead?.rows[0]?.cells.length || 0;
           const hasCompatibleRows = Array.from(this.tBodies).every((body) =>
@@ -31,7 +32,34 @@ export default function DataTableInit() {
             "destroy": true,
             "bFilter": true,
             "sDom": 'fBtlpi',
-            'pagingType': 'numbers',
+            ...(listControlsPath ? {
+              pageLength: 10,
+              lengthMenu: [[5, 10, 20, 50], [5, 10, 20, 50]],
+              pagingType: 'simple_numbers',
+              footerCallback: function (this: any) {
+                const api = this.api();
+                const visibleRows = api.rows({ page: 'current' }).nodes().toArray() as HTMLTableRowElement[];
+                const footer = api.table().node().querySelector('tfoot') as HTMLElement | null;
+                if (!footer) return;
+
+                const rowAttributes: Record<string, string> = {
+                  total: 'data-total-amount',
+                  paid: 'data-paid-amount',
+                  remaining: 'data-remaining-amount',
+                };
+                footer.querySelectorAll('[data-total-footer]').forEach((cell) => {
+                  const footerCell = cell as HTMLElement;
+                  const totalType = footerCell.dataset.totalFooter || '';
+                  const attribute = rowAttributes[totalType];
+                  if (!attribute) return;
+                  const total = visibleRows.reduce((sum, row) => {
+                    const amountCell = row.querySelector<HTMLElement>(`[${attribute}]`);
+                    return sum + Number(amountCell?.getAttribute(attribute) || 0);
+                  }, 0);
+                  footerCell.textContent = `Rs. ${total.toFixed(2)}`;
+                });
+              },
+            } : { pagingType: 'numbers' }),
             "ordering": true,
             "language": {
               search: ' ',

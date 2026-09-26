@@ -1,4 +1,5 @@
 import React from 'react';
+import Link from 'next/link';
 import { getExpenses, getExpenseCategories } from '@/app/actions/expenses';
 import AddExpenseModal from '@/components/expenses/AddExpenseModal';
 
@@ -8,12 +9,15 @@ export default async function ExpensesPage() {
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="page-title">
           <h4>Expenses</h4>
           <h6>Manage your expenses</h6>
         </div>
-        <div className="page-btn">
+        <div className="d-flex align-items-center gap-2 flex-wrap">
+          <Link href="/expenses/category" className="btn btn-outline-secondary">
+            <i className="fa fa-list-alt me-1" aria-hidden="true"></i>Expense Category
+          </Link>
           <AddExpenseModal categories={categories} />
         </div>
       </div>

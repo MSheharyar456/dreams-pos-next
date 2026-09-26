@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getEmployees, deleteEmployee } from '@/app/actions/employees';
 import { revalidatePath } from 'next/cache';
 import DeleteButton from '@/components/ui/DeleteButton';
+import PeopleListSwitch from '@/components/layout/PeopleListSwitch';
 
 export default async function EmployeeList() {
   const employees = await getEmployees();
@@ -15,16 +16,19 @@ export default async function EmployeeList() {
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="page-title">
           <h4>Employee List</h4>
           <h6>Manage your employees</h6>
         </div>
-        <div className="page-btn">
-          <Link href="/employees/add" className="btn btn-added">
-            <img src="/assets/img/icons/plus.svg" className="me-1" alt="img" />
-            Add New Employee
-          </Link>
+        <div className="d-flex align-items-center flex-wrap gap-3">
+          <PeopleListSwitch active="/employees" />
+          <div className="page-btn">
+            <Link href="/employees/add" className="btn btn-added">
+              <img src="/assets/img/icons/plus.svg" className="me-1" alt="img" />
+              Add New Employee
+            </Link>
+          </div>
         </div>
       </div>
 

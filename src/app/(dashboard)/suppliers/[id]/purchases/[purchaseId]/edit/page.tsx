@@ -31,6 +31,10 @@ export default async function EditSupplierPurchase({ params }: { params: Promise
     notFound();
   }
 
+  let pendingPurchase: any = null;
+  try { pendingPurchase = purchase.notes ? JSON.parse(purchase.notes) : null; } catch { pendingPurchase = null; }
+  const isPending = pendingPurchase?.type === 'pending_pop';
+
   // Build catalog
   const catalog = products.flatMap((product: any) => (product.variants || []).map((variant: any) => ({
     productId: product.id,
@@ -46,7 +50,9 @@ export default async function EditSupplierPurchase({ params }: { params: Promise
   })));
 
   // Convert existing purchase items to cart format
-  const cartItems = (purchase.items || []).map((item: any) => ({
+  const cartItems = isPending
+    ? (pendingPurchase.cartItems || []).map((item: any) => ({ ...item }))
+    : (purchase.items || []).map((item: any) => ({
     productId: item.variant?.product?.id,
     variantId: item.product_variant_id,
     name: item.variant?.product?.name || 'Unknown product',
@@ -67,11 +73,12 @@ export default async function EditSupplierPurchase({ params }: { params: Promise
       purchaseId={purchaseId}
       catalog={catalog}
       initialCart={cartItems}
-      initialPaidAmount={Number(purchase.paid_amount || 0)}
-      initialNotes={purchase.notes || ''}
-      initialShippingPrice={Number(purchase.shipping_price || 0)}
-      initialLoaderPrice={Number(purchase.loader_price || 0)}
-      initialUnloadingPrice={Number(purchase.unloading_price || 0)}
+      initialPaidAmount={Number(isPending ? pendingPurchase.cashPaid || 0 : purchase.paid_amount || 0)}
+      initialNotes={isPending ? pendingPurchase.note || '' : purchase.notes || ''}
+      initialShippingPrice={Number(isPending ? pendingPurchase.shippingPrice || 0 : purchase.shipping_price || 0)}
+      initialLoaderPrice={Number(isPending ? pendingPurchase.loaderPrice || 0 : purchase.loader_price || 0)}
+      initialUnloadingPrice={Number(isPending ? pendingPurchase.unloadingPrice || 0 : purchase.unloading_price || 0)}
+      isPending={isPending}
       currentUserEmail={initialEmployeeName}
     />
   );

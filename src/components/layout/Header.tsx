@@ -53,7 +53,7 @@ const handleLogout = async (e: React.MouseEvent) => {
         </span>
       </a>
       
-      <div className="d-none d-md-flex position-absolute translate-middle-x align-items-center" style={{ height: '60px', left: '28%' }}>
+      <div className="d-none d-md-flex position-absolute translate-middle-x align-items-center" style={{ height: '60px', left: '35%' }}>
         <h4 className="m-0" style={{ fontWeight: 800, letterSpacing: '1px', textTransform: 'uppercase' }}>
         <span style={{ color: '#0B3B60' }}>JAVEED ALNOOR</span>{' '}
         <span style={{ color: '#F69220' }}>BUILDING</span>

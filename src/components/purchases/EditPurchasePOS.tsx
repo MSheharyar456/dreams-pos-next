@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Swal from 'sweetalert2';
-import { updatePurchase, type PurchaseCartItem } from '@/app/actions/purchases';
+import { updatePendingPurchase, updatePurchase, type PurchaseCartItem } from '@/app/actions/purchases';
 
 type CatalogItem = { productId: string; variantId: string; name: string; categoryName?: string; variantName: string; unitId?: string; unitName?: string; purchasePrice: number; salePrice: number; stock: number };
 
@@ -18,6 +18,7 @@ export default function EditPurchasePOS({
   initialShippingPrice,
   initialLoaderPrice,
   initialUnloadingPrice,
+  isPending = false,
   currentUserEmail = 'Unknown',
 }: {
   supplierId: string;
@@ -30,6 +31,7 @@ export default function EditPurchasePOS({
   initialShippingPrice: number;
   initialLoaderPrice: number;
   initialUnloadingPrice: number;
+  isPending?: boolean;
   currentUserEmail?: string;
 }) {
   const router = useRouter();
@@ -84,7 +86,8 @@ export default function EditPurchasePOS({
     if (!cart.length) return;
     if (Number(paidAmount) > total) return Swal.fire('Check payment', 'Paid amount cannot be more than the purchase total.', 'warning');
     setSaving(true);
-    const result = await updatePurchase(
+    const updateAction = isPending ? updatePendingPurchase : updatePurchase;
+    const result = await updateAction(
       purchaseId,
       supplierId,
       cart,
@@ -97,13 +100,13 @@ export default function EditPurchasePOS({
     );
     setSaving(false);
     if (!result.success) return Swal.fire('Purchase not updated', result.error || 'Please try again.', 'error');
-    await Swal.fire({ icon: 'success', title: 'Purchase updated', text: 'Stock and supplier balance have been updated.', timer: 1400, showConfirmButton: false });
-    router.push(`/suppliers/${supplierId}/purchases/${purchaseId}`);
+    await Swal.fire({ icon: 'success', title: 'Purchase updated', text: isPending ? 'The POP remains pending. Stock and supplier balance will update after approval.' : 'Purchase details, stock, and supplier balance have been updated.', timer: 1600, showConfirmButton: false });
+    router.push('/purchase-dashboard');
   }
 
   return <>
     <div className="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom">
-      <div><h2 className="mb-1" style={{ fontWeight: 800 }}>Edit Purchase (POP)</h2><div className="text-muted">Editing stock from: <strong>{supplierName}</strong></div><div className="mt-2 d-flex align-items-center gap-2"><label className="small text-muted mb-0">Purchased by:</label><input type="text" className="form-control form-control-sm" style={{ width: 250 }} value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} placeholder="Enter employee name" /></div></div>
+      <div><h2 className="mb-1" style={{ fontWeight: 800 }}>Edit Purchase (POP)</h2><div className="text-muted">Supplier: <strong>{supplierName}</strong>{isPending && <span className="badge bg-warning text-dark ms-2">Pending approval</span>}</div><div className="mt-2 d-flex align-items-center gap-2"><label className="small text-muted mb-0">Purchased by:</label><input type="text" className="form-control form-control-sm" style={{ width: 250 }} value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} placeholder="Enter employee name" /></div></div>
       <div className="text-end"><div className="small text-muted">Purchase total</div><div style={{ color: '#ff9f43', fontWeight: 800, fontSize: 24 }}>Rs. {total.toFixed(2)}</div></div>
     </div>
     <div className="card"><div className="card-body" style={{ padding: '0 15px 0 15px' }}>

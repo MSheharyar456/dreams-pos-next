@@ -196,6 +196,91 @@ export async function getAllPurchases() {
   return data || [];
 }
 
+/** Update a POP that has not been approved yet. This intentionally leaves stock,
+ * supplier advance, and supplier ledger untouched until approvePurchase runs. */
+export async function updatePendingPurchase(
+  purchaseId: string,
+  supplierId: string,
+  cartItems: PurchaseCartItem[],
+  cashPaid: number,
+  note = '',
+  shippingPrice = 0,
+  loaderPrice = 0,
+  unloadingPrice = 0,
+  createdByName = 'Unknown',
+) {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, error: 'You must be logged in to edit a purchase.' };
+
+  const { data: purchase, error: purchaseError } = await supabase
+    .from('purchases')
+    .select('id, supplier_id, notes')
+    .eq('id', purchaseId)
+    .single();
+  if (purchaseError || !purchase || purchase.supplier_id !== supplierId) {
+    return { success: false, error: 'Purchase invoice not found.' };
+  }
+  let pending: any;
+  try { pending = purchase.notes ? JSON.parse(purchase.notes) : null; } catch { pending = null; }
+  if (pending?.type !== 'pending_pop') {
+    return { success: false, error: 'This purchase is no longer pending approval. Refresh and try again.' };
+  }
+  if (!cartItems.length) return { success: false, error: 'Add at least one product to the purchase.' };
+  const validItems = cartItems.filter((item) => item.productId && item.variantId && numberValue(item.quantity) > 0 && numberValue(item.purchasePrice) >= 0);
+  if (validItems.length !== cartItems.length) {
+    return { success: false, error: 'Select an existing product and use a valid quantity (greater than 0).' };
+  }
+
+  const itemSubtotal = validItems.reduce((sum, item) => sum + numberValue(item.quantity) * numberValue(item.purchasePrice), 0);
+  const shipping = Math.max(0, numberValue(shippingPrice));
+  const loader = Math.max(0, numberValue(loaderPrice));
+  const unloading = Math.max(0, numberValue(unloadingPrice));
+  const charges = shipping + loader + unloading;
+  const totalAmount = itemSubtotal + charges;
+  const paid = numberValue(cashPaid);
+  if (paid < 0 || paid > totalAmount) return { success: false, error: 'Paid amount cannot be more than the purchase total.' };
+
+  const { data: supplier } = await supabase.from('suppliers').select('opening_balance').eq('id', supplierId).single();
+  if (!supplier) return { success: false, error: 'Supplier was not found.' };
+  const openingAdvance = Math.max(0, numberValue(supplier.opening_balance));
+  const advanceUsed = Math.min(openingAdvance, totalAmount - paid);
+  const notes = JSON.stringify({
+    ...pending,
+    type: 'pending_pop',
+    note: note.trim(),
+    cartItems: validItems,
+    shippingPrice: shipping,
+    loaderPrice: loader,
+    unloadingPrice: unloading,
+    cashPaid: paid,
+    openingAdvance,
+    advanceUsed,
+    availableAdvance: openingAdvance - advanceUsed,
+    createdByName: createdByName.trim() || 'Unknown',
+  });
+  const { error } = await supabase.from('purchases').update({
+    subtotal: itemSubtotal,
+    shipping_price: shipping,
+    loader_price: loader,
+    unloading_price: unloading,
+    other_charges: charges,
+    total_amount: totalAmount,
+    paid_amount: paid,
+    remaining_amount: totalAmount - paid,
+    payment_status: 'unpaid',
+    notes,
+    created_by_name: createdByName.trim() || 'Unknown',
+    updated_at: new Date().toISOString(),
+  }).eq('id', purchaseId);
+  if (error) return { success: false, error: error.message };
+
+  revalidatePath('/purchase-dashboard');
+  revalidatePath(`/suppliers/${supplierId}/purchases`);
+  revalidatePath(`/suppliers/${supplierId}/purchases/${purchaseId}`);
+  return { success: true };
+}
+
 export async function getPurchaseById(purchaseId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase

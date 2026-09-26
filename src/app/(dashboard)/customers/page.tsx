@@ -1,22 +1,26 @@
 import Link from 'next/link';
 import { getCustomers } from '@/app/actions/customers';
 import CustomerDeleteButton from '@/components/customers/CustomerDeleteButton';
+import PeopleListSwitch from '@/components/layout/PeopleListSwitch';
 
 export default async function CustomersList() {
   const items = await getCustomers();
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="page-title">
           <h4>Customer List</h4>
           <h6>Manage your customers</h6>
         </div>
-        <div className="page-btn">
-          <Link href="/customers/add" className="btn btn-added">
-            <img src="/assets/img/icons/plus.svg" alt="img" className="me-1" />
-            Add Customer
-          </Link>
+        <div className="d-flex align-items-center flex-wrap gap-3">
+          <PeopleListSwitch active="/customers" />
+          <div className="page-btn">
+            <Link href="/customers/add" className="btn btn-added">
+              <img src="/assets/img/icons/plus.svg" alt="img" className="me-1" />
+              Add Customer
+            </Link>
+          </div>
         </div>
       </div>
 

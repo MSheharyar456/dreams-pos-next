@@ -1,22 +1,26 @@
 import Link from 'next/link';
 import { getSuppliers } from '@/app/actions/suppliers';
 import SupplierDeleteButton from '@/components/suppliers/SupplierDeleteButton';
+import PeopleListSwitch from '@/components/layout/PeopleListSwitch';
 
 export default async function SuppliersList() {
   const items = await getSuppliers();
 
   return (
     <>
-      <div className="page-header">
+      <div className="page-header d-flex justify-content-between align-items-center flex-wrap gap-3">
         <div className="page-title">
           <h4>Supplier List</h4>
           <h6>Manage your suppliers</h6>
         </div>
-        <div className="page-btn">
-          <Link href="/suppliers/add" className="btn btn-added">
-            <img src="/assets/img/icons/plus.svg" alt="img" className="me-1" />
-            Add Supplier
-          </Link>
+        <div className="d-flex align-items-center flex-wrap gap-3">
+          <PeopleListSwitch active="/suppliers" />
+          <div className="page-btn">
+            <Link href="/suppliers/add" className="btn btn-added">
+              <img src="/assets/img/icons/plus.svg" alt="img" className="me-1" />
+              Add Supplier
+            </Link>
+          </div>
         </div>
       </div>
 

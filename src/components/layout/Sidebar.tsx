@@ -23,13 +23,27 @@ export default function Sidebar() {
                 <span> Dashboard</span>
               </Link>
             </li>
-            <li className={pathname === '/purchase-dashboard' ? 'active' : ''}>
-              <Link href="/purchase-dashboard">
-                <img src="/assets/img/icons/product.svg" alt="img" />
-                <span> Purchase Dashboard</span>
+            <li className={pathname === '/sales' ? 'active' : ''}>
+              <Link href="/sales">
+                <img src="/assets/img/icons/sales1.svg" alt="img" />
+                <span> Sales List</span>
               </Link>
             </li>
-            
+
+            <li className={pathname === '/expenses' ? 'active' : ''}>
+              <Link href="/expenses">
+                <img src="/assets/img/icons/expense1.svg" alt="img" />
+                <span> Expense List</span>
+              </Link>
+            </li>
+
+            <li className={pathname === '/customers' ? 'active' : ''}>
+              <Link href="/customers">
+                <img src="/assets/img/icons/users1.svg" alt="img" />
+                <span> People</span>
+              </Link>
+            </li>
+
             <li className="submenu">
               <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('Product'); }} className={openSubmenu === 'Product' ? 'subdrop' : ''}>
                 <img src="/assets/img/icons/product.svg" alt="img" />
@@ -48,48 +62,6 @@ export default function Sidebar() {
             </li>
 
             <li className="submenu">
-              <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('Sales'); }} className={openSubmenu === 'Sales' ? 'subdrop' : ''}>
-                <img src="/assets/img/icons/sales1.svg" alt="img" />
-                <span> Sales</span> <span className="menu-arrow"></span>
-              </a>
-              <ul style={{ display: openSubmenu === 'Sales' ? 'block' : 'none' }}>
-                <li><Link href="/sales" className={pathname === '/sales' ? 'active' : ''}>Sales List</Link></li>
-                <li><Link href="/purchases" className={pathname === '/purchases' ? 'active' : ''}>Purchase List</Link></li>
-                <li><Link href="/pos" className={pathname === '/pos' ? 'active' : ''}>POS</Link></li>
-                <li><Link href="/sales/new" className={pathname === '/sales/new' ? 'active' : ''}>New Sales</Link></li>
-                <li><Link href="/sales/returns" className={pathname === '/sales/returns' ? 'active' : ''}>Sales Return List</Link></li>
-                <li><Link href="/sales/returns/new" className={pathname === '/sales/returns/new' ? 'active' : ''}>New Sales Return</Link></li>
-              </ul>
-            </li>
-
-            <li className="submenu">
-              <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('Expense'); }} className={openSubmenu === 'Expense' ? 'subdrop' : ''}>
-                <img src="/assets/img/icons/expense1.svg" alt="img" />
-                <span> Expense</span> <span className="menu-arrow"></span>
-              </a>
-              <ul style={{ display: openSubmenu === 'Expense' ? 'block' : 'none' }}>
-                <li><Link href="/expenses" className={pathname === '/expenses' ? 'active' : ''}>Expense List</Link></li>
-                <li><Link href="/expenses/category" className={pathname === '/expenses/category' ? 'active' : ''}>Expense Category</Link></li>
-              </ul>
-            </li>
-
-            <li className="submenu">
-              <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('People'); }} className={openSubmenu === 'People' ? 'subdrop' : ''}>
-                <img src="/assets/img/icons/users1.svg" alt="img" />
-                <span> People</span> <span className="menu-arrow"></span>
-              </a>
-              <ul style={{ display: openSubmenu === 'People' ? 'block' : 'none' }}>
-                <li><Link href="/customers" className={pathname === '/customers' ? 'active' : ''}>Customer List</Link></li>
-                <li><Link href="/customers/add" className={pathname === '/customers/add' ? 'active' : ''}>Add Customer</Link></li>
-                <li><Link href="/suppliers" className={pathname === '/suppliers' ? 'active' : ''}>Supplier List</Link></li>
-                <li><Link href="/loans" className={pathname === '/loans' ? 'active' : ''}>Ledger</Link></li>
-                <li><Link href="/suppliers/add" className={pathname === '/suppliers/add' ? 'active' : ''}>Add Supplier</Link></li>
-                <li><Link href="/employees" className={pathname === '/employees' ? 'active' : ''}>Employee List</Link></li>
-                <li><Link href="/employees/add" className={pathname === '/employees/add' ? 'active' : ''}>Add Employee</Link></li>
-              </ul>
-            </li>
-
-            <li className="submenu">
               <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('Report'); }} className={openSubmenu === 'Report' ? 'subdrop' : ''}>
                 <img src="/assets/img/icons/time.svg" alt="img" />
                 <span> Report</span> <span className="menu-arrow"></span>
@@ -103,30 +75,11 @@ export default function Sidebar() {
               </ul>
             </li>
 
-            <li className="submenu">
-              <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('Users'); }} className={openSubmenu === 'Users' ? 'subdrop' : ''}>
-                <img src="/assets/img/icons/users1.svg" alt="img" />
-                <span> Users</span> <span className="menu-arrow"></span>
-              </a>
-              <ul style={{ display: openSubmenu === 'Users' ? 'block' : 'none' }}>
-                <li><a href="#">New User </a></li>
-                <li><a href="#">Users List</a></li>
-              </ul>
-            </li>
-
-            <li className="submenu">
-              <a href="#" onClick={(e) => { e.preventDefault(); toggleSubmenu('Settings'); }} className={openSubmenu === 'Settings' ? 'subdrop' : ''}>
+            <li className={pathname === '/settings' ? 'active' : ''}>
+              <Link href="/settings">
                 <img src="/assets/img/icons/settings.svg" alt="img" />
-                <span> Settings</span> <span className="menu-arrow"></span>
-              </a>
-              <ul style={{ display: openSubmenu === 'Settings' ? 'block' : 'none' }}>
-                <li><Link href="/settings" className={pathname === '/settings' ? 'active' : ''}>General Settings</Link></li>
-                <li><a href="#">Email Settings</a></li>
-                <li><a href="#">Payment Settings</a></li>
-                <li><a href="#">Currency Settings</a></li>
-                <li><a href="#">Group Permissions</a></li>
-                <li><a href="#">Tax Rates</a></li>
-              </ul>
+                <span> Settings</span>
+              </Link>
             </li>
 
           </ul>
